@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生消费统计及可视化平台</title>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="icon" href="/static/icons/money-bag.png" type="image/png">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Arial', sans-serif; background-color: #f0f2f5; }
+        .sidebar { width: 240px; background: linear-gradient(180deg, #1e3a5f 0%, #2d5a87 100%); min-height: 100vh; position: fixed; left: 0; top: 0; z-index: 1000; transition: width 0.3s ease; }
+        .sidebar-logo { padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .sidebar-logo h1 { color: white; font-size: 18px; font-weight: 600; line-height: 1.4; }
+        .sidebar-menu { padding: 16px 0; }
+        .menu-item { padding: 14px 20px; color: rgba(255,255,255,0.8); cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 12px; }
+        .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.15); color: white; border-left: 3px solid #3b82f6; }
+        .menu-item svg { width: 20px; height: 20px; }
+        .resize-handle { position: absolute; right: 0; top: 0; bottom: 0; width: 4px; cursor: col-resize; background: transparent; transition: background 0.3s; }
+        .resize-handle:hover { background: rgba(255,255,255,0.3); }
+        .main-content { margin-left: 240px; min-height: 100vh; transition: margin-left 0.3s ease; }
+        .top-header { background: white; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 100; }
+        .top-header h2 { font-size: 20px; font-weight: 600; color: #1f2937; }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+        .btn { padding: 8px 16px; border-radius: 6px; font-size: 14px; cursor: pointer; transition: all 0.3s; display: inline-flex; align-items: center; gap: 6px; }
+        .btn-primary { background: #3b82f6; color: white; border: none; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-outline { background: white; color: #6b7280; border: 1px solid #d1d5db; }
+        .btn-outline:hover { background: #f3f4f6; }
+        .content { padding: 24px; }
+        .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        .stat-card { padding: 16px; border-radius: 12px; color: white; }
+        .stat-card.blue { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
+        .stat-card.green { background: linear-gradient(135deg, #10b981, #059669); }
+        .stat-card.teal { background: linear-gradient(135deg, #0d9488, #0f766e); }
+        .stat-card.purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
+        .stat-label { font-size: 12px; opacity: 0.9; margin-bottom: 4px; }
+        .stat-value { font-size: 20px; font-weight: 700; }
+        .chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 24px; }
+        .chart-container { height: 350px; width: 100%; }
+        .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.3s; }
+        .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .chart-header { padding: 16px 20px; border-bottom: 1px solid #f3f4f6; }
+        .chart-header h3 { font-size: 16px; font-weight: 600; color: #374151; }
+        .chart-body { padding: 16px; }
+        .table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f9fafb; padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e5e7eb; }
+        td { padding: 12px 16px; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6; }
+        tr:hover td { background: #f9fafb; }
+        .section-title { font-size: 18px; font-weight: 600; color: #1f2937; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #3b82f6; display: inline-block; }
+        .day-btn { width: 2.25rem; height: 2.25rem; border-radius: 0.75rem; display: inline-flex; align-items: center; justify-content: center; user-select: none; }
+        .day-btn.disabled { background: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
+        .day-btn.enabled { background: #f8fafc; color: #111827; border: 1px solid #e5e7eb; }
+        .day-btn.enabled:hover { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15); }
+        .day-btn.selected { background: #0d9488; color: white; border-color: #0d9488; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal-overlay.show { display: flex; }
+        .modal { background: white; border-radius: 16px; width: 100%; max-width: 480px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
+        .modal-header { padding: 20px 24px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center; }
+        .modal-header h3 { font-size: 18px; font-weight: 600; color: #111827; }
+        .modal-close { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.3s; }
+        .modal-close:hover { background: #f3f4f6; }
+        .modal-body { padding: 24px; }
+        .modal-footer { padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; }
+        .hamburger { display: none; position: fixed; top: 16px; left: 16px; z-index: 1001; width: 40px; height: 40px; background: #1e3a5f; border-radius: 8px; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
+        .hamburger span { display: block; width: 20px; height: 2px; background: white; margin: 2px 0; transition: all 0.3s; }
+        .hamburger.active span:nth-child(1) { transform: rotate(45deg) translate(4px, 4px); }
+        .hamburger.active span:nth-child(2) { opacity: 0; }
+        .hamburger.active span:nth-child(3) { transform: rotate(-45deg) translate(4px, -4px); }
+        .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; }
+        .sidebar-overlay.show { display: block; }
+        .date-hint { font-size: 14px; color: #6b7280; }
+        .view-section { display: none; }
+        .view-section.active { display: block; }
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-240px); }
+            .sidebar.active { transform: translateX(0); }
+            .main-content { margin-left: 0; }
+            .hamburger { display: flex; }
+            .top-header { padding-left: 60px; }
+            .content { padding: 16px; }
+            .stat-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+            .stat-card { padding: 12px; }
+            .stat-value { font-size: 16px; }
+            .chart-grid { grid-template-columns: 1fr; gap: 16px; }
+            .chart-container { height: 280px; }
+            table { font-size: 12px; }
+            th, td { padding: 8px 10px; }
+        }
+        @media (max-width: 480px) {
+            .stat-grid { grid-template-columns: 1fr; }
+            .top-header h2 { font-size: 16px; }
+            .btn { padding: 6px 12px; font-size: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="hamburger" id="hamburger">
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+    <div class="sidebar">
+        <div class="sidebar-logo">
+            <h1>学生消费统计及可视化平台</h1>
+        </div>
+        <div class="sidebar-menu">
+            <div class="menu-item active" data-page="overview">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                <span>首页概览</span>
+            </div>
+            <div class="menu-item" data-page="statistics">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                <span>数据统计</span>
+            </div>
+            <div class="menu-item" data-page="details">
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                <span>消费明细</span>
+            </div>
+        </div>
+        <div class="resize-handle"></div>
+    </div>
+
+    <div class="main-content">
+        <div class="top-header">
+            <h2 id="page-title">数据概览</h2>
+            <div class="header-right">
+                <span id="date-hint" class="date-hint hidden">已筛选：--</span>
+                <button type="button" id="btn-date-clear" class="btn btn-outline hidden">清除筛选</button>
+                <button type="button" id="btn-date" class="btn btn-primary">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    日期筛选
+                </button>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="view-section active" id="view-overview">
+                <div class="stat-grid">
+                    <div class="stat-card blue">
+                        <div class="stat-label">总消费金额</div>
+                        <div class="stat-value" id="total-expense">¥0</div>
+                    </div>
+                    <div class="stat-card green">
+                        <div class="stat-label">日均消费</div>
+                        <div class="stat-value" id="daily-average">¥0</div>
+                    </div>
+                    <div class="stat-card teal">
+                        <div class="stat-label">数据周期</div>
+                        <div class="stat-value" id="date-range-display" style="font-size: 16px;">--</div>
+                    </div>
+                    <div class="stat-card purple">
+                        <div class="stat-label">记录总数</div>
+                        <div class="stat-value" id="record-count">0</div>
+                    </div>
+                </div>
+
+                <h2 class="section-title">消费类别占比</h2>
+                <div class="chart-grid">
+                    <div class="card">
+                        <div class="chart-header"><h3>消费类别占比</h3></div>
+                        <div class="chart-body"><div id="category-chart" class="chart-container"></div></div>
+                    </div>
+                    <div class="card">
+                        <div class="chart-header"><h3>每日消费趋势</h3></div>
+                        <div class="chart-body"><div id="trend-chart" class="chart-container"></div></div>
+                    </div>
+                </div>
+
+                <h2 class="section-title">消费明细</h2>
+                <div class="card">
+                    <div class="chart-header"><h3>消费明细表</h3></div>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr id="expense-thead"></tr></thead>
+                            <tbody id="expense-table"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="view-section" id="view-statistics">
+                <h2 class="section-title">数据统计</h2>
+                <div class="chart-grid">
+                    <div class="card">
+                        <div class="chart-header"><h3>消费类别占比</h3></div>
+                        <div class="chart-body"><div id="category-chart2" class="chart-container"></div></div>
+                    </div>
+                    <div class="card">
+                        <div class="chart-header"><h3>每日消费趋势</h3></div>
+                        <div class="chart-body"><div id="trend-chart2" class="chart-container"></div></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="view-section" id="view-details">
+                <h2 class="section-title">消费明细</h2>
+                <div class="card">
+                    <div class="chart-header"><h3>消费明细表</h3></div>
+                    <div class="table-container">
+                        <table>
+                            <thead><tr id="expense-thead2"></tr></thead>
+                            <tbody id="expense-table2"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="date-modal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>选择日期范围</h3>
+                <div class="modal-close" id="btn-date-cancel">
+                    <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </div>
+            </div>
+            <div class="modal-body">
+                <div style="display: flex; gap: 16px; margin-bottom: 20px;">
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 14px; color: #6b7280; margin-bottom: 8px;">年份</label>
+                        <select id="year-select" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;">
+                            <option value="">-- 年 --</option>
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="display: block; font-size: 14px; color: #6b7280; margin-bottom: 8px;">月份</label>
+                        <select id="month-select" style="width: 100%; padding: 10px 12px; border: 1px solid #d1d5db; border-radius: 8px; font-size: 14px;" disabled>
+                            <option value="">-- 月 --</option>
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 12px;">
+                        <span style="font-size: 14px; color: #6b7280;">选择日期</span>
+                        <span id="day-caption" style="font-size: 14px; color: #9ca3af;"></span>
+                    </div>
+                    <div id="day-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px;"></div>
+                </div>
+                <p style="margin-top: 16px; font-size: 13px; color: #9ca3af;">提示：选择年份可按年筛选，选择月份可按月筛选，选择日期可按日筛选</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btn-date-cancel2" class="btn btn-outline">取消</button>
+                <button type="button" id="btn-date-confirm" class="btn btn-primary">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let categoryChart, trendChart, categoryChart2, trendChart2;
+        let activeFilter = { year: null, month: null, day: null };
+        let dateIndex = null;
+
+        function pad2(n) { return String(n).padStart(2, '0'); }
+        function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
+
+        function initCharts() {
+            if (!categoryChart) categoryChart = echarts.init(document.getElementById('category-chart'));
+            if (!trendChart) trendChart = echarts.init(document.getElementById('trend-chart'));
+            if (!categoryChart2) categoryChart2 = echarts.init(document.getElementById('category-chart2'));
+            if (!trendChart2) trendChart2 = echarts.init(document.getElementById('trend-chart2'));
+        }
+
+        function renderUI(data) {
+            document.getElementById('total-expense').textContent = `¥${Number(data.total_expense || 0).toFixed(0)}`;
+            document.getElementById('daily-average').textContent = `¥${Number(data.daily_average || 0).toFixed(0)}`;
+            document.getElementById('record-count').textContent = (data.raw_table || []).length;
+            const dr = data.date_range || {};
+            document.getElementById('date-range-display').textContent = (dr.min && dr.max) ? `${dr.min} ~ ${dr.max}` : '--';
+
+            initCharts();
+
+            const categoryData = Object.entries(data.category_expense || {}).map(([name, value]) => ({ name, value }));
+            const trendDates = Object.keys(data.daily_trend || {}).sort();
+            const trendValues = trendDates.map(d => data.daily_trend[d]);
+
+            const chartOption = {
+                tooltip: { trigger: 'item', formatter: '{a} <br/>{b}: ¥{c} ({d}%)' },
+                legend: { orient: 'vertical', left: 'left', textStyle: { color: '#333' } },
+                series: [{
+                    name: '消费类别', type: 'pie', radius: ['45%', '70%'], center: ['50%', '50%'],
+                    data: categoryData.length ? categoryData : [{ name: '暂无数据', value: 0 }],
+                    emphasis: { itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0,0,0,0.5)' } },
+                    itemStyle: { color: (params) => ['#3b82f6', '#10b981', '#8b5cf6', '#0d9488', '#f59e0b', '#ef4444'][params.dataIndex % 6] }
+                }]
+            };
+
+            const trendOption = {
+                tooltip: { trigger: 'axis', formatter: params => params[0] ? `${params[0].name}<br/>消费金额: ¥${Number(params[0].value).toFixed(0)}` : '' },
+                grid: { left: '3%', right: '4%', bottom: '15%', containLabel: true },
+                dataZoom: [{ type: 'slider', show: true, xAxisIndex: [0], start: 0, end: 100, bottom: 8 }, { type: 'inside', xAxisIndex: [0], start: 0, end: 100 }],
+                xAxis: { type: 'category', boundaryGap: false, data: trendDates, axisLabel: { rotate: 45 } },
+                yAxis: { type: 'value', axisLabel: { formatter: '¥{value}' } },
+                series: [{
+                    name: '消费金额', type: 'line', data: trendValues, smooth: true,
+                    areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(59, 130, 246, 0.5)' }, { offset: 1, color: 'rgba(59, 130, 246, 0.1)' }]) },
+                    lineStyle: { color: '#3b82f6' }, itemStyle: { color: '#3b82f6' }
+                }]
+            };
+
+            categoryChart.setOption(chartOption, true);
+            trendChart.setOption(trendOption, true);
+            categoryChart2.setOption(chartOption, true);
+            trendChart2.setOption(trendOption, true);
+
+            const makeRow = (row) => {
+                const tr = document.createElement('tr');
+                ['日期', '类别', '金额'].forEach(key => {
+                    const td = document.createElement('td');
+                    let val = row[key] != null ? String(row[key]) : '';
+                    if (key === '金额' && val && val !== 'nan') val = '¥' + val;
+                    td.textContent = val === 'nan' ? '' : val;
+                    tr.appendChild(td);
+                });
+                return tr;
+            };
+
+            const thead = document.getElementById('expense-thead');
+            thead.innerHTML = '';
+            ['日期', '类别', '金额'].forEach(label => {
+                const th = document.createElement('th');
+                th.textContent = label;
+                thead.appendChild(th);
+            });
+            document.getElementById('expense-thead2').innerHTML = thead.innerHTML;
+
+            const tableBody = document.getElementById('expense-table');
+            tableBody.innerHTML = '';
+            const tableBody2 = document.getElementById('expense-table2');
+            tableBody2.innerHTML = '';
+            (data.raw_table || []).forEach(row => {
+                tableBody.appendChild(makeRow(row));
+                tableBody2.appendChild(makeRow(row));
+            });
+        }
+
+        function buildRangeFromFilter() {
+            if (!activeFilter.year) return null;
+            const y = Number(activeFilter.year);
+            if (activeFilter.day) return { start: activeFilter.day, end: activeFilter.day, label: activeFilter.day };
+            if (activeFilter.month) {
+                const m = Number(activeFilter.month);
+                return { start: `${y}-${pad2(m)}-01`, end: `${y}-${pad2(m)}-${pad2(daysInMonth(y, m))}`, label: `${y}-${pad2(m)}` };
+            }
+            return { start: `${y}-01-01`, end: `${y}-12-31`, label: String(y) };
+        }
+
+        function buildStatisticsUrl() {
+            const range = buildRangeFromFilter();
+            if (!range) return '/api/statistics';
+            return '/api/statistics?' + new URLSearchParams({ start_date: range.start, end_date: range.end });
+        }
+
+        function loadStatistics() {
+            fetch(buildStatisticsUrl()).then(r => r.json()).then(renderUI).catch(e => console.error('Error:', e));
+        }
+
+        function loadDateIndex() {
+            fetch('/api/date_index').then(r => r.json()).then(res => {
+                dateIndex = res && res.has_data ? res.date_index : null;
+                setupYearOptions();
+            }).catch(() => { dateIndex = null; setupYearOptions(); });
+        }
+
+        function updateDateHint() {
+            const range = buildRangeFromFilter();
+            const hasFilter = !!range;
+            document.getElementById('date-hint').classList.toggle('hidden', !hasFilter);
+            if (hasFilter) document.getElementById('date-hint').textContent = '已筛选：' + range.label;
+            document.getElementById('btn-date-clear').classList.toggle('hidden', !hasFilter);
+        }
+
+        const modal = document.getElementById('date-modal');
+        const yearSelect = document.getElementById('year-select');
+        const monthSelect = document.getElementById('month-select');
+        const dayGrid = document.getElementById('day-grid');
+        const dayCaption = document.getElementById('day-caption');
+        let tempSelection = { year: null, month: null, day: null };
+
+        function openDateModal() { modal.classList.add('show'); tempSelection = { ...activeFilter }; applyTempSelectionToUI(); }
+        function closeDateModal() { modal.classList.remove('show'); }
+
+        function setFilterAndRefresh(filter) {
+            activeFilter = filter || { year: null, month: null, day: null };
+            updateDateHint();
+            loadStatistics();
+        }
+
+        function setupYearOptions() {
+            yearSelect.innerHTML = '<option value="">-- 年 --</option>';
+            monthSelect.innerHTML = '<option value="">-- 月 --</option>';
+            monthSelect.disabled = true;
+            dayGrid.innerHTML = '';
+            dayCaption.textContent = '';
+            const years = (dateIndex && dateIndex.years) ? dateIndex.years : [];
+            years.forEach(y => yearSelect.appendChild(new Option(String(y), String(y))));
+            applyTempSelectionToUI();
+        }
+
+        function monthsForYear(y) { return (dateIndex && dateIndex.months_by_year) ? (dateIndex.months_by_year[String(y)] || []) : []; }
+        function daysForYearMonth(y, m) { return (dateIndex && dateIndex.days_by_year_month) ? (dateIndex.days_by_year_month[`${y}-${pad2(m)}`] || []) : []; }
+
+        function renderDayGrid(y, m) {
+            dayGrid.innerHTML = '';
+            if (!y || !m) { dayCaption.textContent = ''; return; }
+            const dim = daysInMonth(Number(y), Number(m));
+            const available = new Set(daysForYearMonth(y, m));
+            dayCaption.textContent = `${y}-${pad2(m)}（${available.size}天有数据）`;
+            ['一', '二', '三', '四', '五', '六', '日'].forEach(w => dayGrid.appendChild(Object.assign(document.createElement('div'), { className: 'text-center text-xs text-gray-400', textContent: w })));
+            const offset = (new Date(Number(y), Number(m) - 1, 1).getDay() + 6) % 7;
+            for (let i = 0; i < offset; i++) dayGrid.appendChild(document.createElement('div'));
+            for (let d = 1; d <= dim; d++) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'day-btn ' + (available.has(d) ? 'enabled' : 'disabled');
+                btn.textContent = d;
+                if (available.has(d)) btn.onclick = () => { tempSelection.day = `${y}-${pad2(m)}-${pad2(d)}`; highlightSelectedDay(); };
+                btn.dataset.day = d;
+                dayGrid.appendChild(btn);
+            }
+            highlightSelectedDay();
+        }
+
+        function highlightSelectedDay() {
+            const y = tempSelection.year, m = tempSelection.month, day = tempSelection.day;
+            const selectedD = (day && y && m && day.startsWith(`${y}-${pad2(m)}-@`)) ? Number(day.slice(8, 10)) : null;
+            dayGrid.querySelectorAll('button.day-btn.enabled').forEach(b => b.classList.toggle('selected', selectedD === Number(b.dataset.day)));
+        }
+
+        function applyTempSelectionToUI() {
+            yearSelect.value = tempSelection.year ? String(tempSelection.year) : '';
+            monthSelect.innerHTML = '<option value="">-- 月 --</option>';
+            if (tempSelection.year) {
+                const months = monthsForYear(tempSelection.year);
+                for (let m = 1; m <= 12; m++) {
+                    const opt = new Option(String(m) + ' 月', String(m));
+                    if (months.indexOf(m) === -1) opt.disabled = true;
+                    monthSelect.appendChild(opt);
+                }
+                monthSelect.disabled = false;
+                monthSelect.value = tempSelection.month ? String(tempSelection.month) : '';
+            } else {
+                monthSelect.disabled = true;
+                tempSelection.month = null;
+                tempSelection.day = null;
+            }
+            renderDayGrid(tempSelection.year, tempSelection.month);
+        }
+
+        yearSelect.onchange = function() { tempSelection.year = yearSelect.value ? Number(yearSelect.value) : null; tempSelection.month = null; tempSelection.day = null; applyTempSelectionToUI(); };
+        monthSelect.onchange = function() { tempSelection.month = monthSelect.value ? Number(monthSelect.value) : null; tempSelection.day = null; renderDayGrid(tempSelection.year, tempSelection.month); };
+        document.getElementById('btn-date-cancel').onclick = closeDateModal;
+        document.getElementById('btn-date-cancel2').onclick = closeDateModal;
+        document.getElementById('btn-date-confirm').onclick = () => { closeDateModal(); setFilterAndRefresh(tempSelection); };
+        document.getElementById('btn-date').onclick = openDateModal;
+        document.getElementById('btn-date-clear').onclick = () => { activeFilter = { year: null, month: null, day: null }; updateDateHint(); loadStatistics(); };
+
+        const pageTitleMap = { overview: '数据概览', statistics: '数据统计', details: '消费明细' };
+
+        document.querySelectorAll('.menu-item[data-page]').forEach(item => {
+            item.onclick = function() {
+                const page = this.dataset.page;
+                document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
+                this.classList.add('active');
+                document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+                document.getElementById(`view-${page}`).classList.add('active');
+                document.getElementById('page-title').textContent = pageTitleMap[page];
+                setTimeout(() => {
+                    categoryChart && categoryChart.resize();
+                    trendChart && trendChart.resize();
+                    categoryChart2 && categoryChart2.resize();
+                    trendChart2 && trendChart2.resize();
+                }, 50);
+                if (window.innerWidth <= 768) toggleSidebar();
+                window.scrollTo(0, 0);
+            };
+        });
+
+        const hamburger = document.getElementById('hamburger');
+        const sidebar = document.querySelector('.sidebar');
+        const overlay = document.getElementById('sidebar-overlay');
+        function toggleSidebar() { sidebar.classList.toggle('active'); hamburger.classList.toggle('active'); overlay.classList.toggle('show'); }
+        hamburger.onclick = toggleSidebar;
+        overlay.onclick = toggleSidebar;
+
+        const resizeHandle = document.querySelector('.resize-handle');
+        let isResizing = false;
+        resizeHandle.addEventListener('mousedown', (e) => {
+            if (window.innerWidth <= 768) return;
+            isResizing = true;
+            document.body.style.cursor = 'col-resize';
+            document.body.style.userSelect = 'none';
+        });
+        document.addEventListener('mousemove', (e) => {
+            if (!isResizing) return;
+            const width = Math.max(180, Math.min(400, e.clientX));
+            sidebar.style.width = width + 'px';
+            document.querySelector('.main-content').style.marginLeft = width + 'px';
+        });
+        document.addEventListener('mouseup', () => {
+            if (isResizing) { isResizing = false; document.body.style.cursor = ''; document.body.style.userSelect = ''; }
+        });
+
+        loadStatistics();
+        loadDateIndex();
+    </script>
+</body>
+</html>
