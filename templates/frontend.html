@@ -8,28 +8,39 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="icon" href="/static/icons/money-bag.png" type="image/png">
     <style>
+        /* 初始化  */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: 'Arial', sans-serif; background-color: #f0f2f5; }
+        /* 侧边栏 */
         .sidebar { width: 240px; background: linear-gradient(180deg, #1e3a5f 0%, #2d5a87 100%); min-height: 100vh; position: fixed; left: 0; top: 0; z-index: 1000; transition: width 0.3s ease; }
+        /* 侧边栏 Logo 区域 */
         .sidebar-logo { padding: 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .sidebar-logo h1 { color: white; font-size: 18px; font-weight: 600; line-height: 1.4; }
+        /* 侧边栏菜单 */
         .sidebar-menu { padding: 16px 0; }
         .menu-item { padding: 14px 20px; color: rgba(255,255,255,0.8); cursor: pointer; transition: all 0.3s; display: flex; align-items: center; gap: 12px; }
         .menu-item:hover, .menu-item.active { background: rgba(255,255,255,0.15); color: white; border-left: 3px solid #3b82f6; }
         .menu-item svg { width: 20px; height: 20px; }
+        /* 侧边栏拖拽调整宽度的把手 */
         .resize-handle { position: absolute; right: 0; top: 0; bottom: 0; width: 4px; cursor: col-resize; background: transparent; transition: background 0.3s; }
         .resize-handle:hover { background: rgba(255,255,255,0.3); }
+        /* 主内容区域 */
         .main-content { margin-left: 240px; min-height: 100vh; transition: margin-left 0.3s ease; }
+        /* 顶部栏 */
         .top-header { background: white; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; position: sticky; top: 0; z-index: 100; }
         .top-header h2 { font-size: 20px; font-weight: 600; color: #1f2937; }
         .header-right { display: flex; align-items: center; gap: 12px; }
+        /* 按钮样式 */
         .btn { padding: 8px 16px; border-radius: 6px; font-size: 14px; cursor: pointer; transition: all 0.3s; display: inline-flex; align-items: center; gap: 6px; }
         .btn-primary { background: #3b82f6; color: white; border: none; }
         .btn-primary:hover { background: #2563eb; }
         .btn-outline { background: white; color: #6b7280; border: 1px solid #d1d5db; }
         .btn-outline:hover { background: #f3f4f6; }
+        /* 内容区 */
         .content { padding: 24px; }
+        /* 统计卡片网格 */
         .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+        /* 统计卡片 */
         .stat-card { padding: 16px; border-radius: 12px; color: white; }
         .stat-card.blue { background: linear-gradient(135deg, #3b82f6, #1d4ed8); }
         .stat-card.green { background: linear-gradient(135deg, #10b981, #059669); }
@@ -37,6 +48,7 @@
         .stat-card.purple { background: linear-gradient(135deg, #8b5cf6, #7c3aed); }
         .stat-label { font-size: 12px; opacity: 0.9; margin-bottom: 4px; }
         .stat-value { font-size: 20px; font-weight: 700; }
+        /* 图表区域 */
         .chart-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 24px; }
         .chart-container { height: 350px; width: 100%; }
         .card { background: white; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); transition: all 0.3s; }
@@ -44,17 +56,21 @@
         .chart-header { padding: 16px 20px; border-bottom: 1px solid #f3f4f6; }
         .chart-header h3 { font-size: 16px; font-weight: 600; color: #374151; }
         .chart-body { padding: 16px; }
+        /* 表格样式 */
         .table-container { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; }
         th { background: #f9fafb; padding: 12px 16px; text-align: left; font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid #e5e7eb; }
         td { padding: 12px 16px; font-size: 14px; color: #374151; border-bottom: 1px solid #f3f4f6; }
         tr:hover td { background: #f9fafb; }
+        /* 章节标题 */
         .section-title { font-size: 18px; font-weight: 600; color: #1f2937; margin-bottom: 16px; padding-bottom: 8px; border-bottom: 2px solid #3b82f6; display: inline-block; }
+        /* 日期选择器按钮（日历网格中的日期） */
         .day-btn { width: 2.25rem; height: 2.25rem; border-radius: 0.75rem; display: inline-flex; align-items: center; justify-content: center; user-select: none; }
         .day-btn.disabled { background: #f3f4f6; color: #9ca3af; cursor: not-allowed; }
         .day-btn.enabled { background: #f8fafc; color: #111827; border: 1px solid #e5e7eb; }
         .day-btn.enabled:hover { border-color: #0d9488; box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.15); }
         .day-btn.selected { background: #0d9488; color: white; border-color: #0d9488; }
+        /* 模态框 */
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: none; align-items: center; justify-content: center; z-index: 1000; }
         .modal-overlay.show { display: flex; }
         .modal { background: white; border-radius: 16px; width: 100%; max-width: 480px; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); }
@@ -63,17 +79,21 @@
         .modal-close { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: background 0.3s; }
         .modal-close:hover { background: #f3f4f6; }
         .modal-body { padding: 24px; }
+        /* 菜单（移动端） */
         .modal-footer { padding: 16px 24px; border-top: 1px solid #e5e7eb; display: flex; justify-content: flex-end; gap: 12px; }
         .hamburger { display: none; position: fixed; top: 16px; left: 16px; z-index: 1001; width: 40px; height: 40px; background: #1e3a5f; border-radius: 8px; flex-direction: column; justify-content: center; align-items: center; cursor: pointer; }
         .hamburger span { display: block; width: 20px; height: 2px; background: white; margin: 2px 0; transition: all 0.3s; }
         .hamburger.active span:nth-child(1) { transform: rotate(45deg) translate(4px, 4px); }
         .hamburger.active span:nth-child(2) { opacity: 0; }
         .hamburger.active span:nth-child(3) { transform: rotate(-45deg) translate(4px, -4px); }
+        /* 侧边栏遮罩层（移动端） */
         .sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; }
         .sidebar-overlay.show { display: block; }
+        /* 辅助样式 */
         .date-hint { font-size: 14px; color: #6b7280; }
         .view-section { display: none; }
         .view-section.active { display: block; }
+        /* 响应式布局 */
         @media (max-width: 768px) {
             .sidebar { transform: translateX(-240px); }
             .sidebar.active { transform: translateX(0); }
@@ -89,6 +109,7 @@
             table { font-size: 12px; }
             th, td { padding: 8px 10px; }
         }
+        /* 小屏幕（最大宽度 480px） */
         @media (max-width: 480px) {
             .stat-grid { grid-template-columns: 1fr; }
             .top-header h2 { font-size: 16px; }
@@ -252,13 +273,14 @@
     </div>
 
     <script>
+        // 设置全局变量
         let categoryChart, trendChart, categoryChart2, trendChart2;
         let activeFilter = { year: null, month: null, day: null };
         let dateIndex = null;
 
         function pad2(n) { return String(n).padStart(2, '0'); }
         function daysInMonth(y, m) { return new Date(y, m, 0).getDate(); }
-
+        // 图表初始化与渲染
         function initCharts() {
             if (!categoryChart) categoryChart = echarts.init(document.getElementById('category-chart'));
             if (!trendChart) trendChart = echarts.init(document.getElementById('trend-chart'));
@@ -267,18 +289,20 @@
         }
 
         function renderUI(data) {
+             // 更新统计卡片数值
             document.getElementById('total-expense').textContent = `¥${Number(data.total_expense || 0).toFixed(0)}`;
             document.getElementById('daily-average').textContent = `¥${Number(data.daily_average || 0).toFixed(0)}`;
             document.getElementById('record-count').textContent = (data.raw_table || []).length;
             const dr = data.date_range || {};
             document.getElementById('date-range-display').textContent = (dr.min && dr.max) ? `${dr.min} ~ ${dr.max}` : '--';
-
+            // 确保图表实例存在
             initCharts();
-
+            // 准备饼图数据
             const categoryData = Object.entries(data.category_expense || {}).map(([name, value]) => ({ name, value }));
+            // 准备折线图数据（按日期排序）
             const trendDates = Object.keys(data.daily_trend || {}).sort();
             const trendValues = trendDates.map(d => data.daily_trend[d]);
-
+            // 饼图配置
             const chartOption = {
                 tooltip: { trigger: 'item', formatter: '{a} <br/>{b}: ¥{c} ({d}%)' },
                 legend: { orient: 'vertical', left: 'left', textStyle: { color: '#333' } },
@@ -289,25 +313,31 @@
                     itemStyle: { color: (params) => ['#3b82f6', '#10b981', '#8b5cf6', '#0d9488', '#f59e0b', '#ef4444'][params.dataIndex % 6] }
                 }]
             };
-
+            // 折线图配置
             const trendOption = {
                 tooltip: { trigger: 'axis', formatter: params => params[0] ? `${params[0].name}<br/>消费金额: ¥${Number(params[0].value).toFixed(0)}` : '' },
+                // 留出空间给数据缩放滑块
                 grid: { left: '3%', right: '4%', bottom: '15%', containLabel: true },
-                dataZoom: [{ type: 'slider', show: true, xAxisIndex: [0], start: 0, end: 100, bottom: 8 }, { type: 'inside', xAxisIndex: [0], start: 0, end: 100 }],
+                // 底部滑动条
+                dataZoom: [{ type: 'slider', show: true, xAxisIndex: [0], start: 0, end: 100, bottom: 8 }, 
+                // 内置缩放（鼠标滚轮）
+                { type: 'inside', xAxisIndex: [0], start: 0, end: 100 }],
+                // 日期标签旋转45度
                 xAxis: { type: 'category', boundaryGap: false, data: trendDates, axisLabel: { rotate: 45 } },
                 yAxis: { type: 'value', axisLabel: { formatter: '¥{value}' } },
                 series: [{
-                    name: '消费金额', type: 'line', data: trendValues, smooth: true,
+                    name: '消费金额', type: 'line', data: trendValues, smooth: true,// 平滑曲线
                     areaStyle: { color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [{ offset: 0, color: 'rgba(59, 130, 246, 0.5)' }, { offset: 1, color: 'rgba(59, 130, 246, 0.1)' }]) },
+                    // 渐变填充区域
                     lineStyle: { color: '#3b82f6' }, itemStyle: { color: '#3b82f6' }
                 }]
             };
-
+             // 应用配置到所有图表实例
             categoryChart.setOption(chartOption, true);
             trendChart.setOption(trendOption, true);
             categoryChart2.setOption(chartOption, true);
             trendChart2.setOption(trendOption, true);
-
+            // 动态生成表格行
             const makeRow = (row) => {
                 const tr = document.createElement('tr');
                 ['日期', '类别', '金额'].forEach(key => {
@@ -319,7 +349,7 @@
                 });
                 return tr;
             };
-
+            // 构建表头
             const thead = document.getElementById('expense-thead');
             thead.innerHTML = '';
             ['日期', '类别', '金额'].forEach(label => {
@@ -327,8 +357,9 @@
                 th.textContent = label;
                 thead.appendChild(th);
             });
+            // 同步明细页表头
             document.getElementById('expense-thead2').innerHTML = thead.innerHTML;
-
+            // 填充表格数据（两个表格共用同一份数据）
             const tableBody = document.getElementById('expense-table');
             tableBody.innerHTML = '';
             const tableBody2 = document.getElementById('expense-table2');
@@ -338,7 +369,7 @@
                 tableBody2.appendChild(makeRow(row));
             });
         }
-
+        // 日期筛选相关函数
         function buildRangeFromFilter() {
             if (!activeFilter.year) return null;
             const y = Number(activeFilter.year);
@@ -349,7 +380,7 @@
             }
             return { start: `${y}-01-01`, end: `${y}-12-31`, label: String(y) };
         }
-
+        // 构造 API 请求 URL
         function buildStatisticsUrl() {
             const range = buildRangeFromFilter();
             if (!range) return '/api/statistics';
@@ -374,7 +405,7 @@
             if (hasFilter) document.getElementById('date-hint').textContent = '已筛选：' + range.label;
             document.getElementById('btn-date-clear').classList.toggle('hidden', !hasFilter);
         }
-
+        // 日期模态框操作
         const modal = document.getElementById('date-modal');
         const yearSelect = document.getElementById('year-select');
         const monthSelect = document.getElementById('month-select');
@@ -411,7 +442,9 @@
             const dim = daysInMonth(Number(y), Number(m));
             const available = new Set(daysForYearMonth(y, m));
             dayCaption.textContent = `${y}-${pad2(m)}（${available.size}天有数据）`;
+            // 添加星期标题
             ['一', '二', '三', '四', '五', '六', '日'].forEach(w => dayGrid.appendChild(Object.assign(document.createElement('div'), { className: 'text-center text-xs text-gray-400', textContent: w })));
+            // 计算第一天是星期几（周一为一周开始）
             const offset = (new Date(Number(y), Number(m) - 1, 1).getDay() + 6) % 7;
             for (let i = 0; i < offset; i++) dayGrid.appendChild(document.createElement('div'));
             for (let d = 1; d <= dim; d++) {
@@ -451,7 +484,7 @@
             }
             renderDayGrid(tempSelection.year, tempSelection.month);
         }
-
+        // 日期选择器事件绑定
         yearSelect.onchange = function() { tempSelection.year = yearSelect.value ? Number(yearSelect.value) : null; tempSelection.month = null; tempSelection.day = null; applyTempSelectionToUI(); };
         monthSelect.onchange = function() { tempSelection.month = monthSelect.value ? Number(monthSelect.value) : null; tempSelection.day = null; renderDayGrid(tempSelection.year, tempSelection.month); };
         document.getElementById('btn-date-cancel').onclick = closeDateModal;
@@ -459,35 +492,40 @@
         document.getElementById('btn-date-confirm').onclick = () => { closeDateModal(); setFilterAndRefresh(tempSelection); };
         document.getElementById('btn-date').onclick = openDateModal;
         document.getElementById('btn-date-clear').onclick = () => { activeFilter = { year: null, month: null, day: null }; updateDateHint(); loadStatistics(); };
-
+        // 菜单切换（视图跳转）
         const pageTitleMap = { overview: '数据概览', statistics: '数据统计', details: '消费明细' };
 
         document.querySelectorAll('.menu-item[data-page]').forEach(item => {
             item.onclick = function() {
                 const page = this.dataset.page;
+                // 更新菜单激活样式
                 document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
                 this.classList.add('active');
+                // 切换视图显示
                 document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
                 document.getElementById(`view-${page}`).classList.add('active');
+                // 更新顶部标题
                 document.getElementById('page-title').textContent = pageTitleMap[page];
+                // 图表容器尺寸自适应（因为显示/隐藏导致尺寸变化）
                 setTimeout(() => {
                     categoryChart && categoryChart.resize();
                     trendChart && trendChart.resize();
                     categoryChart2 && categoryChart2.resize();
                     trendChart2 && trendChart2.resize();
                 }, 50);
+                // 移动端点击菜单后自动收起侧边栏
                 if (window.innerWidth <= 768) toggleSidebar();
                 window.scrollTo(0, 0);
             };
         });
-
+        // 侧边栏汉堡菜单与遮罩
         const hamburger = document.getElementById('hamburger');
         const sidebar = document.querySelector('.sidebar');
         const overlay = document.getElementById('sidebar-overlay');
         function toggleSidebar() { sidebar.classList.toggle('active'); hamburger.classList.toggle('active'); overlay.classList.toggle('show'); }
         hamburger.onclick = toggleSidebar;
         overlay.onclick = toggleSidebar;
-
+        // 侧边栏宽度拖拽调整
         const resizeHandle = document.querySelector('.resize-handle');
         let isResizing = false;
         resizeHandle.addEventListener('mousedown', (e) => {
@@ -505,7 +543,7 @@
         document.addEventListener('mouseup', () => {
             if (isResizing) { isResizing = false; document.body.style.cursor = ''; document.body.style.userSelect = ''; }
         });
-
+        // 初始化数据加载
         loadStatistics();
         loadDateIndex();
     </script>
